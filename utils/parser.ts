@@ -128,28 +128,38 @@ export const analyzeAttendance = (
       // Sort to find First and Last
       timestamps.sort((a, b) => a.getTime() - b.getTime());
 
+      const noon = set(currentDate, { hours: 12, minutes: 0, seconds: 0 });
+
       if (timestamps.length === 1) {
         // Single log logic
         const singleLog = timestamps[0];
-        // Heuristic: If before 12:00 PM -> Likely CheckIn, missing CheckOut
-        // If >= 12:00 PM -> Likely CheckOut, missing CheckIn
-        const noon = set(currentDate, { hours: 12, minutes: 0, seconds: 0 });
-
         if (singleLog < noon) {
           record.checkIn = singleLog;
           record.checkOut = null;
           record.status.push(DayStatus.MISSING_OUT);
-          record.notes.push("Không có dữ liệu giờ ra");
+          record.notes.push("Thiếu dữ liệu giờ ra (Chỉ có log buổi sáng)");
         } else {
           record.checkIn = null;
           record.checkOut = singleLog;
           record.status.push(DayStatus.MISSING_IN);
-          record.notes.push("Không có dữ liệu giờ vào");
+          record.notes.push("Thiếu dữ liệu giờ vào (Chỉ có log buổi chiều)");
         }
       } else {
-        // >= 2 logs: First is In, Last is Out
-        record.checkIn = timestamps[0];
-        record.checkOut = timestamps[timestamps.length - 1];
+        // >= 2 logs
+        const first = timestamps[0];
+        const last = timestamps[timestamps.length - 1];
+
+        if (first >= noon) {
+          // Heuristic: If even the first log is in the afternoon, assume morning check-in was missed
+          record.checkIn = null;
+          record.checkOut = last;
+          record.status.push(DayStatus.MISSING_IN);
+          record.notes.push("Thiếu dữ liệu giờ vào (Tất cả log từ 12:00 trở đi)");
+        } else {
+          // Normal case: First is In, Last is Out
+          record.checkIn = first;
+          record.checkOut = last;
+        }
       }
 
       // --- 1. Check Late Arrival (Only if CheckIn exists) ---
