@@ -1,0 +1,5 @@
+{
+  "name": "Attendance Analyzer",
+  "description": "A tool to analyze attendance logs, calculate late arrivals, early leaves, and manage monthly quotas based on shift rules.",
+  "requestFramePermissions": []
+}
