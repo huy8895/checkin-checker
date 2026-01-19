@@ -2,29 +2,46 @@ import { parse, isValid, startOfDay, isFriday, isWeekend, format, addDays, diffe
 import { RawLog, DailyRecord, DayStatus, ShiftConfig } from '../types';
 import { FRIDAY_EARLY_MINUTES, QUOTA_EARLY_LEAVE_COUNT, QUOTA_EARLY_LEAVE_MINUTES } from '../constants';
 
-// Regex to find date/time patterns like "01/15/26 6:19:15PM" or "01/15/26  6:19:15PM"
-// Matches MM/DD/YY followed by H:MM:SS(AM/PM)
-const DATETIME_REGEX = /(\d{2})\/(\d{2})\/(\d{2})\s+(\d{1,2}):(\d{2}):(\d{2})(AM|PM)/g;
+// Regex to find date/time patterns like:
+// Case 1: "01/15/26 6:19:15PM" (US)
+// Case 2: "16/01/26 9:19:00CH" (VN)
+const DATETIME_REGEX = /(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+(\d{1,2}):(\d{2}):(\d{2})(AM|PM|SA|CH)/gi;
 
 export const parseRawInput = (input: string): RawLog[] => {
   const logs: RawLog[] = [];
   const matches = input.matchAll(DATETIME_REGEX);
 
   for (const match of matches) {
-    const [fullStr, month, day, yearShort, hour, minute, second, meridiem] = match;
+    const [fullStr, p1, p2, yearPart, hour, minute, second, meridiemRaw] = match;
     
-    // Construct a parseable string for date-fns or standard Date
-    // assuming 'yearShort' 25 means 2025, 26 means 2026.
-    const yearFull = parseInt(yearShort) < 50 ? `20${yearShort}` : `19${yearShort}`;
+    // Normalize meridiem for date-fns (SA -> AM, CH -> PM)
+    const meridiem = meridiemRaw.toUpperCase() === 'SA' ? 'AM' : 
+                     meridiemRaw.toUpperCase() === 'CH' ? 'PM' : 
+                     meridiemRaw.toUpperCase();
+
+    // Normalize Year
+    const yearFull = yearPart.length === 2 
+      ? (parseInt(yearPart) < 50 ? `20${yearPart}` : `19${yearPart}`)
+      : yearPart;
     
-    // date-fns format string for "01/15/2026 6:19:15PM" is "MM/dd/yyyy h:mm:ssa"
-    const dateString = `${month}/${day}/${yearFull} ${hour}:${minute}:${second}${meridiem}`;
+    // Heuristic for DD/MM vs MM/DD
+    // If first part > 12, it must be Day (DD/MM/YYYY)
+    // If second part > 12, it must be Day (MM/DD/YYYY)
+    // Default to MM/DD/YYYY if ambiguous (as per original logic)
+    let formatStr = 'MM/dd/yyyy h:mm:ssa';
+    let dateString = `${p1}/${p2}/${yearFull} ${hour}:${minute}:${second}${meridiem}`;
+
+    if (parseInt(p1) > 12) {
+      formatStr = 'dd/MM/yyyy h:mm:ssa';
+    } else if (parseInt(p2) > 12) {
+      formatStr = 'MM/dd/yyyy h:mm:ssa';
+    }
     
-    const parsedDate = parse(dateString, 'MM/dd/yyyy h:mm:ssa', new Date());
+    const parsedDate = parse(dateString, formatStr, new Date());
 
     if (isValid(parsedDate)) {
       logs.push({
-        empId: 'unknown', // Parsing logic could be improved to find ID near the date, but usually grouped by file
+        empId: 'unknown',
         timestamp: parsedDate,
         rawString: fullStr
       });
