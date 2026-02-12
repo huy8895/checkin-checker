@@ -1,0 +1,53 @@
+name: Build Single HTML File
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Create single HTML file
+        run: |
+          cd dist
+          # Combine CSS files
+          echo '<!DOCTYPE html>' > combined.html
+          head -n $(grep -n '</head>' index.html | cut -d: -f1) index.html >> combined.html
+          
+          # Add inline CSS
+          echo '<style>' >> combined.html
+          find . -name "*.css" -exec cat {} \; >> combined.html
+          echo '</style>' >> combined.html
+          
+          # Add body content
+          tail -n +$(grep -n '<body' index.html | cut -d: -f1) index.html | sed 's/<link[^>]*>//g; s/<script src="[^"]*">/<script>/g' >> combined.html
+          
+          # Add JavaScript
+          echo '<script>' >> combined.html
+          find . -name "*.js" -not -path "./index.html" -exec cat {} \; >> combined.html
+          echo '</script>' >> combined.html
+          
+          echo '</body></html>' >> combined.html
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: single-html-file
+          path: dist/combined.html
+          retention-days: 7
