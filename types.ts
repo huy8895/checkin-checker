@@ -2,6 +2,7 @@ export enum ShiftType {
   SHIFT_1 = 'SHIFT_1', // 8h -> 18h
   SHIFT_2 = 'SHIFT_2', // 8h30 -> 18h30
   SHIFT_3 = 'SHIFT_3', // 9h -> 19h
+  SHIFT_4 = 'SHIFT_4', // 7h30 -> 17h30
 }
 
 export interface ShiftConfig {

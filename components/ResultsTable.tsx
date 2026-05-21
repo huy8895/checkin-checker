@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { DailyRecord, DayStatus } from '../types';
@@ -9,71 +9,89 @@ interface ResultsTableProps {
 }
 
 const ResultsTable: React.FC<ResultsTableProps> = ({ records }) => {
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+
   const stats = useMemo(() => {
     return records.reduce(
       (acc, rec) => {
-        if (rec.status.includes(DayStatus.LATE)) acc.late++;
-        if (rec.status.includes(DayStatus.EARLY_VIOLATION)) acc.earlyViolation++;
-        if (rec.status.includes(DayStatus.EARLY_ALLOWED)) acc.earlyAllowed++;
-        if (rec.status.includes(DayStatus.ABSENT)) acc.absent++;
-        if (rec.status.includes(DayStatus.MISSING_IN) || rec.status.includes(DayStatus.MISSING_OUT)) acc.missing++;
+        if (rec.status.includes(DayStatus.LATE)) acc.late.push(rec);
+        if (rec.status.includes(DayStatus.EARLY_VIOLATION)) acc.earlyViolation.push(rec);
+        if (rec.status.includes(DayStatus.EARLY_ALLOWED)) acc.earlyAllowed.push(rec);
+        if (rec.status.includes(DayStatus.ABSENT)) acc.absent.push(rec);
+        if (rec.status.includes(DayStatus.MISSING_IN) || rec.status.includes(DayStatus.MISSING_OUT)) acc.missing.push(rec);
         return acc;
       },
-      { late: 0, earlyViolation: 0, earlyAllowed: 0, absent: 0, missing: 0 }
+      { 
+        late: [] as DailyRecord[], 
+        earlyViolation: [] as DailyRecord[], 
+        earlyAllowed: [] as DailyRecord[], 
+        absent: [] as DailyRecord[], 
+        missing: [] as DailyRecord[] 
+      }
     );
   }, [records]);
 
   if (records.length === 0) return null;
 
+  const renderStatCard = (
+    title: string, 
+    recordsList: DailyRecord[], 
+    icon: any, 
+    iconBg: string, 
+    iconColor: string, 
+    categoryKey: string
+  ) => {
+    const isExpanded = expandedCategory === categoryKey;
+    const Icon = icon;
+    
+    return (
+      <div 
+        className={`bg-white p-4 rounded-xl shadow-sm border transition-all cursor-pointer ${isExpanded ? 'border-blue-400 ring-1 ring-blue-400 col-span-1 sm:col-span-2 lg:col-span-2' : 'border-slate-200 hover:border-blue-200'}`}
+        onClick={() => setExpandedCategory(isExpanded ? null : categoryKey)}
+      >
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-lg ${iconBg} ${iconColor}`}>
+            <Icon className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-sm text-slate-500 font-medium">{title}</p>
+            <p className="text-2xl font-bold text-slate-800">{recordsList.length}</p>
+          </div>
+        </div>
+        
+        {isExpanded && (
+          <div className="mt-4 pt-3 border-t border-slate-100 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+            {recordsList.length > 0 ? (
+              <ul className="space-y-2">
+                {recordsList.map((rec: DailyRecord, idx: number) => (
+                  <li key={idx} className="flex flex-wrap items-center justify-between text-xs p-2.5 bg-slate-50 rounded-lg hover:bg-slate-100 border border-slate-100">
+                    <span className="font-semibold text-slate-700 w-24">
+                      {format(rec.date, 'dd/MM/yyyy')}
+                    </span>
+                    <span className="text-slate-500 font-mono bg-white px-2 py-1 rounded border border-slate-200">
+                      {rec.checkIn ? format(rec.checkIn, 'HH:mm:ss') : '--:--:--'} - {rec.checkOut ? format(rec.checkOut, 'HH:mm:ss') : '--:--:--'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-slate-400 italic text-center py-2">Không có dữ liệu</p>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
-          <div className="p-2 bg-yellow-100 rounded-lg text-yellow-600">
-            <Clock className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-sm text-slate-500 font-medium">Số lần đi muộn</p>
-            <p className="text-2xl font-bold text-slate-800">{stats.late}</p>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
-          <div className="p-2 bg-red-100 rounded-lg text-red-600">
-            <AlertCircle className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-sm text-slate-500 font-medium">Về sớm (Vi phạm)</p>
-            <p className="text-2xl font-bold text-slate-800">{stats.earlyViolation}</p>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
-          <div className="p-2 bg-green-100 rounded-lg text-green-600">
-            <CheckCircle2 className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-sm text-slate-500 font-medium">Về sớm (Hợp lệ)</p>
-            <p className="text-2xl font-bold text-slate-800">{stats.earlyAllowed}</p>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
-          <div className="p-2 bg-orange-100 rounded-lg text-orange-600">
-            <AlertTriangle className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-sm text-slate-500 font-medium">Thiếu log</p>
-            <p className="text-2xl font-bold text-slate-800">{stats.missing}</p>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
-          <div className="p-2 bg-gray-100 rounded-lg text-gray-600">
-            <CalendarX className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-sm text-slate-500 font-medium">Nghỉ làm / Vắng</p>
-            <p className="text-2xl font-bold text-slate-800">{stats.absent}</p>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-start">
+        {renderStatCard('Số lần đi muộn', stats.late, Clock, 'bg-yellow-100', 'text-yellow-600', 'late')}
+        {renderStatCard('Về sớm (Vi phạm)', stats.earlyViolation, AlertCircle, 'bg-red-100', 'text-red-600', 'earlyViolation')}
+        {renderStatCard('Về sớm (Hợp lệ)', stats.earlyAllowed, CheckCircle2, 'bg-green-100', 'text-green-600', 'earlyAllowed')}
+        {renderStatCard('Thiếu log', stats.missing, AlertTriangle, 'bg-orange-100', 'text-orange-600', 'missing')}
+        {renderStatCard('Nghỉ làm / Vắng', stats.absent, CalendarX, 'bg-gray-100', 'text-gray-600', 'absent')}
       </div>
 
       {/* Main Table */}

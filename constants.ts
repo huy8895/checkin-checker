@@ -22,6 +22,13 @@ export const SHIFTS: Record<ShiftType, ShiftConfig> = {
     endTime: '19:00',
     graceMinutes: 10,
   },
+  [ShiftType.SHIFT_4]: {
+    id: ShiftType.SHIFT_4,
+    name: 'Ca 4 (07:30 - 17:30)',
+    startTime: '07:30',
+    endTime: '17:30',
+    graceMinutes: 15,
+  },
 };
 
 export const QUOTA_EARLY_LEAVE_COUNT = 3;
