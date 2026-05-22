@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { DailyRecord, DayStatus } from '../types';
-import { AlertCircle, CheckCircle2, Clock, CalendarX, AlertTriangle, LogIn, LogOut } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, CalendarX, AlertTriangle, LogIn, LogOut, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface ResultsTableProps {
   records: DailyRecord[];
@@ -46,16 +46,21 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ records }) => {
     
     return (
       <div 
-        className={`bg-white p-4 rounded-xl shadow-sm border transition-all cursor-pointer ${isExpanded ? 'border-blue-400 ring-1 ring-blue-400 col-span-1 sm:col-span-2 lg:col-span-2' : 'border-slate-200 hover:border-blue-200'}`}
+        className={`bg-white p-4 rounded-xl shadow-sm border transition-all cursor-pointer select-none hover:shadow-md ${isExpanded ? 'border-blue-400 ring-1 ring-blue-400 col-span-1 sm:col-span-2 lg:col-span-2' : 'border-slate-200 hover:border-blue-200'}`}
         onClick={() => setExpandedCategory(isExpanded ? null : categoryKey)}
       >
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${iconBg} ${iconColor}`}>
-            <Icon className="w-6 h-6" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg ${iconBg} ${iconColor}`}>
+              <Icon className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-sm text-slate-500 font-medium">{title}</p>
+              <p className="text-2xl font-bold text-slate-800">{recordsList.length}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-slate-500 font-medium">{title}</p>
-            <p className="text-2xl font-bold text-slate-800">{recordsList.length}</p>
+          <div className="text-slate-400 hover:text-slate-600 transition-colors">
+            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
           </div>
         </div>
         

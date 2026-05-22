@@ -1,20 +1,27 @@
 import React, { useState } from 'react';
 import { SHIFTS } from '../constants';
 import { ShiftType } from '../types';
-import { ClipboardList, Play, Calendar } from 'lucide-react';
+import { ClipboardList, Play, Calendar, Trash2 } from 'lucide-react';
 
 interface InputSectionProps {
   onAnalyze: (rawText: string, shiftId: ShiftType, startDate?: string, endDate?: string) => void;
+  onClear: () => void;
 }
 
-const InputSection: React.FC<InputSectionProps> = ({ onAnalyze }) => {
-  const [text, setText] = useState('');
-  const [selectedShift, setSelectedShift] = useState<ShiftType>(ShiftType.SHIFT_1);
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+const InputSection: React.FC<InputSectionProps> = ({ onAnalyze, onClear }) => {
+  const [text, setText] = useState(() => localStorage.getItem('attendance_raw_text') || '');
+  const [selectedShift, setSelectedShift] = useState<ShiftType>(
+    () => (localStorage.getItem('attendance_selected_shift') as ShiftType) || ShiftType.SHIFT_1
+  );
+  const [fromDate, setFromDate] = useState(() => localStorage.getItem('attendance_from_date') || '');
+  const [toDate, setToDate] = useState(() => localStorage.getItem('attendance_to_date') || '');
 
   const handleAnalyze = () => {
     if (!text.trim()) return;
+    localStorage.setItem('attendance_raw_text', text);
+    localStorage.setItem('attendance_selected_shift', selectedShift);
+    localStorage.setItem('attendance_from_date', fromDate);
+    localStorage.setItem('attendance_to_date', toDate);
     onAnalyze(text, selectedShift, fromDate, toDate);
   };
 
@@ -22,13 +29,32 @@ const InputSection: React.FC<InputSectionProps> = ({ onAnalyze }) => {
       // Sample data from prompt partially
       const sample = `Row1\n044873\n01/15/26  6:19:15PM\n10.2.182.151\nRow2\n044873\n01/15/26  8:02:16AM\n10.2.182.151\nRow11\n044873\n01/12/26  6:00:25PM\n10.2.182.151\nRow12\n044873\n01/12/26  8:01:19AM\n10.2.182.151`;
       setText(sample);
-  }
+  };
+
+  const handleClear = () => {
+    setText('');
+    setSelectedShift(ShiftType.SHIFT_1);
+    setFromDate('');
+    setToDate('');
+    onClear();
+  };
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8">
-      <div className="flex items-center gap-2 mb-4">
-        <ClipboardList className="text-blue-600 w-6 h-6" />
-        <h2 className="text-xl font-semibold text-slate-800">Nhập dữ liệu chấm công</h2>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <ClipboardList className="text-blue-600 w-6 h-6" />
+          <h2 className="text-xl font-semibold text-slate-800">Nhập dữ liệu chấm công</h2>
+        </div>
+        {(text || fromDate || toDate) && (
+          <button 
+            onClick={handleClear}
+            className="flex items-center gap-1 text-xs text-rose-600 hover:text-rose-800 font-medium transition-colors bg-rose-5 px-3 py-1.5 rounded-lg border border-rose-100 hover:bg-rose-100"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Xóa lịch sử
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
